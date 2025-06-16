@@ -1,0 +1,11 @@
+python-dotenv
+sentence-transformers
+qdrant-client
+python-telegram-bot==20.0
+fastapi
+uvicorn
+accelerate
+gspread
+google-auth-oauthlib
+google.generativeai
+google-api-python-client

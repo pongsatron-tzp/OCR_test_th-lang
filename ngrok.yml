@@ -1,0 +1,11 @@
+version: "2"
+authtoken: 2xUBc8ie8FYJaPSbO495HOrrNXe_7E1PrUrsPNAjGVZpvXudT
+
+tunnels:
+  Bot-service:
+    addr: 8000
+    proto: http
+
+  sheet-service:
+    addr: 9000
+    proto: http
