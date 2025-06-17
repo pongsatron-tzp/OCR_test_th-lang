@@ -46,23 +46,20 @@ else:
     logging.info("Gemini API configured successfully.")
 
 
-# --- Jina AI Configuration (ปรับปรุงข้อความ log ให้ชัดเจนขึ้น) ---
-JINA_API_KEY = os.getenv("JINA_API_KEY") # อาจจะยังคงไว้เพื่อความเข้ากันได้ย้อนหลัง หรือลบออกได้
-JINA_EMBEDDING_MODEL = os.getenv("JINA_EMBEDDING_MODEL", "jina-clip-v2") # ไม่ได้ใช้แล้วแต่คงไว้
+# --- Jina AI Configuration ---
+JINA_API_KEY = os.getenv("JINA_API_KEY")
+JINA_EMBEDDING_MODEL = os.getenv("JINA_EMBEDDING_MODEL", "jina-clip-v2")
 
 if not JINA_API_KEY:
     logging.info("JINA_API_KEY not found. Jina AI embedding generation is not used in this setup (using local Ollama/Qwen).")
 else:
-    logging.info("Jina AI API key found but not used for embeddings in this setup (using local Ollama/Qwen).")
+    logging.info("Jina AI API key found (using local Ollama/Qwen).")
 
 
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-# เปลี่ยนชื่อ Collection หลักเป็น PREFIX แทน
 QDRANT_COLLECTION_PREFIX = os.getenv("QDRANT_COLLECTION_PREFIX", "documents_") 
-# QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "documents") # อันนี้จะไม่ได้ใช้แล้ว
-
-# เพิ่ม Environment Variable สำหรับ Ollama/Qwen Embedding Service URL
+# QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "documents")
 OLLAMA_EMBEDDING_URL = os.getenv("OLLAMA_EMBEDDING_URL", "http://192.168.1.10:11434/api/embeddings")
 
 
@@ -73,10 +70,8 @@ if QDRANT_URL:
             url=QDRANT_URL,
             api_key=QDRANT_API_KEY,
             prefer_grpc=True,
-            # check_compatibility=False, # อาจเพิ่มตรงนี้เพื่อปิด warning ถ้ายังเจอ
         )
         logging.info("Qdrant client initialized for cloud instance.")
-        # Removed collection creation here as it will be done per-sheet dynamically
     except Exception as e:
         logging.error(f"Error initializing Qdrant client with cloud URL: {e}", exc_info=True)
         exit(1)
@@ -91,7 +86,7 @@ GOOGLE_SHEET_UNIQUE_ID_COLUMN = os.getenv("GOOGLE_SHEET_UNIQUE_ID_COLUMN")
 GOOGLE_SHEET_LAST_UPDATED_COLUMN = os.getenv("GOOGLE_SHEET_LAST_UPDATED_COLUMN")
 
 gc = None
-worksheets = [] # อันนี้ไม่ได้ถูกใช้งานตรงๆ แล้ว
+worksheets = []
 
 if GOOGLE_SHEET_KEY_PATH and GOOGLE_SHEET_ID and GOOGLE_SHEET_WORKSHEET_NAMES:
     try:
@@ -100,10 +95,8 @@ if GOOGLE_SHEET_KEY_PATH and GOOGLE_SHEET_ID and GOOGLE_SHEET_WORKSHEET_NAMES:
             scopes=['https://www.googleapis.com/auth/spreadsheets']
         )
         gc = gspread.authorize(creds)
-        # sh = gc.open_by_key(GOOGLE_SHEET_ID) # ไม่ต้องเปิดที่นี่แล้ว จะเปิดตอนเรียกใช้ใน get_google_sheet_data
         logging.info("Google Sheet client authorized successfully.")
 
-        # ไม่ต้องโหลด worksheet ตรงนี้แล้ว จะโหลดตอนเรียกใช้ใน get_google_sheet_data
     except Exception as e:
         logging.error(f"Error initializing Google Sheet client or loading worksheets: {e}")
 else:
@@ -141,10 +134,10 @@ async def async_process_text_with_gemini(
                 f"\n\nText Content:\n{input_text}"
             )
             try:
-                await asyncio.sleep(0.3)  # Add a delay before calling Gemini API
+                await asyncio.sleep(0.3)
                 response = await asyncio.to_thread(
                     model.generate_content,
-                    prompt_text # ส่งแค่ข้อความ
+                    prompt_text
                 )
                 markdown_content = response.text
                 if hasattr(response, 'usage_metadata') and response.usage_metadata is not None:
@@ -205,9 +198,8 @@ async def async_process_text_with_gemini(
         return row_num, markdown_content, usage_metadata
 
 # Removed chunk_text as it's no longer needed for row-based embedding
-
 async def async_generate_embedding(
-    input_data: List[str] # Changed to List[str] as we will pass full text
+    input_data: List[str]
 ) -> Optional[List[List[float]]]:
     """
     Generates embeddings using a local embedding API (e.g., Qwen/Ollama) for a list of text inputs.
@@ -224,10 +216,10 @@ async def async_generate_embedding(
     }
 
     embeddings = []
-    for text_to_embed in input_data: # Iterate over the list of strings
+    for text_to_embed in input_data:
         payload = {
             "model": "hf.co/Qwen/Qwen3-Embedding-0.6B-GGUF:latest",
-            "prompt": text_to_embed # Use the string directly
+            "prompt": text_to_embed
         }
         try:
             response = await asyncio.to_thread(
@@ -276,7 +268,7 @@ async def save_points_to_qdrant(
             lambda: qdrant_client.upsert(
                 collection_name=collection_name,
                 points=points,
-                wait=True # รอให้ operations เสร็จสิ้น
+                wait=True,
             )
         )
         logging.info(f"✅ Qdrant upserted {len(points)} points to collection '{collection_name}' successfully.")
@@ -334,7 +326,7 @@ async def process_google_sheet_row_for_embedding(
     row_data: Dict[str, Any],
     row_index: int,
     sheet_name: str,
-    qdrant_target_collection: str # เพิ่ม parameter เพื่อรับชื่อ collection ที่ต้องการ
+    qdrant_target_collection: str
 ) -> Tuple[str, List[PointStruct]] | None:
     """
     Processes a single row from Google Sheet, performs embedding,
@@ -392,8 +384,8 @@ async def process_google_sheet_row_for_embedding(
                         return None
                 except ValueError:
                     logging.warning(f"[{sheet_name}] Invalid Qdrant timestamp for '{unique_id}'. Proceeding with update.")
-    except UnexpectedResponse as e: # เปลี่ยน CollectionNotExist เป็น UnexpectedResponse
-        if "Not found: Collection" in str(e): # ตรวจสอบข้อความ error
+    except UnexpectedResponse as e:
+        if "Not found: Collection" in str(e):
             logging.info(f"[{sheet_name}] Collection '{qdrant_target_collection}' does not exist yet. All rows will be treated as new.")
         else:
             logging.warning(f"[{sheet_name}] Unexpected Qdrant API response when checking for '{unique_id}': {e}. Proceeding with update.")
@@ -418,7 +410,6 @@ async def process_google_sheet_row_for_embedding(
         logging.warning(f"[{sheet_name}] No content for embedding in row ID '{unique_id}'. Skipping.")
         return None
 
-    # Generate embedding for the entire content_text
     embedding_results = await async_generate_embedding([content_text]) 
     
     if not embedding_results or embedding_results[0] is None:
@@ -500,7 +491,7 @@ async def sync_google_sheet_to_qdrant(
                 lambda: qdrant_client.get_collection(collection_name=current_qdrant_collection)
             )
             logging.info(f"Qdrant collection '{current_qdrant_collection}' already exists.")
-        except grpc.RpcError as e: # !!! เปลี่ยนตรงนี้ให้จับ grpc.RpcError ก่อน !!!
+        except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
                 logging.info(f"Qdrant collection '{current_qdrant_collection}' not found (gRPC error). Creating it...")
                 try:
@@ -514,13 +505,13 @@ async def sync_google_sheet_to_qdrant(
                 except Exception as create_e:
                     logging.error(f"Error creating Qdrant collection '{current_qdrant_collection}': {create_e}", exc_info=True)
                     overall_sync_results[sheet_name] = {"status": "failed", "detail": f"Failed to create collection: {create_e}"}
-                    continue # ข้ามชีทนี้ไป
-            else: # ถ้าเป็น gRPC error อื่นๆ ที่ไม่ใช่ NOT_FOUND
+                    continue
+            else:
                 logging.error(f"gRPC error when checking collection '{current_qdrant_collection}': {e}", exc_info=True)
                 overall_sync_results[sheet_name] = {"status": "failed", "detail": f"gRPC error checking collection: {e}"}
                 continue
-        except UnexpectedResponse as e: # ย้าย UnexpectedResponse มาเป็นลำดับที่สอง
-            if "Not found: Collection" in str(e): # ตรวจสอบข้อความ error
+        except UnexpectedResponse as e:
+            if "Not found: Collection" in str(e):
                 logging.info(f"Qdrant collection '{current_qdrant_collection}' not found (UnexpectedResponse). Creating it...")
                 try:
                     await asyncio.to_thread(
@@ -533,8 +524,8 @@ async def sync_google_sheet_to_qdrant(
                 except Exception as create_e:
                     logging.error(f"Error creating Qdrant collection '{current_qdrant_collection}': {create_e}", exc_info=True)
                     overall_sync_results[sheet_name] = {"status": "failed", "detail": f"Failed to create collection: {create_e}"}
-                    continue # ข้ามชีทนี้ไป
-            else: # ถ้าเป็น UnexpectedResponse แต่อ้างอิงถึง error อื่น
+                    continue
+            else:
                 logging.error(f"Unexpected Qdrant API response when checking collection '{current_qdrant_collection}': {e}", exc_info=True)
                 overall_sync_results[sheet_name] = {"status": "failed", "detail": f"Qdrant API error: {e}"}
                 continue
@@ -542,8 +533,6 @@ async def sync_google_sheet_to_qdrant(
             logging.error(f"General error checking Qdrant collection '{current_qdrant_collection}': {e}", exc_info=True)
             overall_sync_results[sheet_name] = {"status": "failed", "detail": f"General error checking collection: {e}"}
             continue
-
-        # ... (ส่วนที่เหลือของโค้ด)
 
         sheet_data = await get_google_sheet_data(sheet_name)
         if not sheet_data:
@@ -567,20 +556,20 @@ async def sync_google_sheet_to_qdrant(
                     existing_qdrant_base_ids.add(point.payload["google_sheet_row_id"])
 
             logging.info(f"Found {len(existing_qdrant_base_ids)} unique base IDs in Qdrant collection '{current_qdrant_collection}'.")
-        except UnexpectedResponse as e: # เปลี่ยน CollectionNotExist เป็น UnexpectedResponse
-            if "Not found: Collection" in str(e): # ตรวจสอบข้อความ error
+        except UnexpectedResponse as e:
+            if "Not found: Collection" in str(e):
                 logging.info(f"Collection '{current_qdrant_collection}' not found during scroll. No existing IDs to check.")
-                existing_qdrant_base_ids = set() # ตั้งค่าให้เป็น set ว่างเปล่า
+                existing_qdrant_base_ids = set()
             else:
                 logging.error(f"Unexpected Qdrant API response when fetching existing IDs for '{current_qdrant_collection}': {e}. Cannot reliably detect deletions for this sheet.", exc_info=True)
-                existing_qdrant_base_ids = set() # ตั้งค่าให้เป็น set ว่างเปล่าเพื่อป้องกันการทำงานผิดพลาด
+                existing_qdrant_base_ids = set()
         except Exception as e:
             logging.error(f"Error fetching existing Qdrant base IDs for '{current_qdrant_collection}': {e}. Cannot reliably detect deletions for this sheet.", exc_info=True)
 
 
         sheet_unique_ids = set()
         processing_tasks = []
-        semaphore = asyncio.Semaphore(concurrency) # Concurrency for sheet row processing
+        semaphore = asyncio.Semaphore(concurrency)
 
         for i, row in enumerate(sheet_data):
             unique_id = row.get(GOOGLE_SHEET_UNIQUE_ID_COLUMN)
@@ -591,7 +580,7 @@ async def sync_google_sheet_to_qdrant(
                         row_data=row,
                         row_index=i,
                         sheet_name=row.get("__worksheet__", ""),
-                        qdrant_target_collection=current_qdrant_collection # ส่งชื่อ collection ไปยังฟังก์ชันประมวลผลแถว
+                        qdrant_target_collection=current_qdrant_collection
                     )
                 )
                 processing_tasks.append(task)
@@ -708,21 +697,18 @@ async def trigger_google_sheet_sync(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="GEMINI_API_KEY is not configured. Please check server settings."
         )
-    
-    # ควรมีเช็คว่า Ollama/Qwen endpoint ใช้งานได้จริงหรือไม่ แทน JINA_API_KEY
-    # ตรวจสอบว่า Qdrant client พร้อมใช้งาน
+
     if qdrant_client is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Qdrant client is not initialized. Please check QDRANT_URL and QDRANT_API_KEY."
         )
 
-    # ทดสอบการเชื่อมต่อกับ Ollama/Qwen Embedding Service
-    embedding_service_url = "http://192.168.1.10:11434/api/embeddings" # ควรเปลี่ยนเป็น Env Var
+    embedding_service_url = "http://192.168.1.10:11434/api/embeddings"
     try:
-        response = await asyncio.to_thread(requests.get, embedding_service_url.replace("/api/embeddings", "/")) # ลองเรียก endpoint พื้นฐานของ Ollama
+        response = await asyncio.to_thread(requests.get, embedding_service_url.replace("/api/embeddings", "/"))
         response.raise_for_status()
-        if "Ollama" not in response.text: # ตรวจสอบว่าเป็น Ollama หรือไม่ (อาจจะปรับตาม response จริง)
+        if "Ollama" not in response.text:
              logging.warning(f"Embedding service at {embedding_service_url} might not be Ollama or not configured correctly.")
         logging.info("Successfully connected to local embedding service (Ollama/Qwen).")
     except requests.exceptions.ConnectionError:
@@ -755,10 +741,11 @@ async def trigger_google_sheet_sync(
             status_code=status.HTTP_200_OK
         )
     except HTTPException:
-        raise # Re-raise HTTPExceptions that were already caught and handled
+        raise
     except Exception as e:
         logging.error(f"Error during Google Sheet sync operation: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An internal server error occurred during Google Sheet synchronization: {e}"
         )
+#uvcorn swap_sheet:app --reload --host 0.0.0.0 --port 9000
