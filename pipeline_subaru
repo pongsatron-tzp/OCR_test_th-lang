@@ -1,0 +1,148 @@
+import time
+import httpx
+import asyncio
+import logging
+from typing import Optional, Callable, Awaitable
+from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
+
+
+def extract_event_info(event_emitter) -> tuple[Optional[str], Optional[str]]:
+    if not event_emitter or not event_emitter.__closure__:
+        return None, None
+    for cell in event_emitter.__closure__:
+        if isinstance(request_info := cell.cell_contents, dict):
+            return request_info.get("chat_id"), request_info.get("message_id")
+    return None, None
+
+
+class Pipe:
+    class Valves(BaseModel):
+        n8n_url: str = Field(
+            default="https://n8n.[your domain].com/webhook/[your webhook URL]",
+            description="n8n webhook URL",
+        )
+        n8n_bearer_token: str = Field(default="...", description="Bearer Token for n8n")
+        input_field: str = Field(default="chatInput", description="Input field name")
+        response_field: str = Field(default="output", description="Response field name")
+        emit_interval: float = Field(default=90.0, description="Status emit interval")
+        enable_status_indicator: bool = Field(
+            default=True, description="Enable status emissions"
+        )
+
+    def __init__(self):
+        self.type = "pipe"
+        self.id = "n8n_pipe"
+        self.name = "N8N Pipe"
+        self.valves = self.Valves()
+        self.last_emit_time = 0
+
+    async def emit_status(
+        self,
+        __event_emitter__: Callable[[dict], Awaitable[None]],
+        level: str,
+        message: str,
+        done: bool,
+    ):
+        current_time = time.time()
+        if (
+            __event_emitter__
+            and self.valves.enable_status_indicator
+            and (
+                current_time - self.last_emit_time >= self.valves.emit_interval or done
+            )
+        ):
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "status": "complete" if done else "in_progress",
+                        "level": level,
+                        "description": message,
+                        "done": done,
+                    },
+                }
+            )
+            self.last_emit_time = current_time
+
+    def build_payload(self, question: str, session_id: str) -> dict:
+        return {"sessionId": session_id, self.valves.input_field: question}
+
+    def handle_response(self, data: dict) -> str:
+        value = data.get(self.valves.response_field)
+        if not value:
+            raise ValueError(
+                f"Missing field '{self.valves.response_field}' in n8n response: {data}"
+            )
+        return value
+
+    async def pipe(
+        self,
+        body: dict,
+        __user__: Optional[dict] = None,
+        __event_emitter__: Callable[[dict], Awaitable[None]] = None,
+        __event_call__: Callable[[dict], Awaitable[dict]] = None,
+    ) -> Optional[dict]:
+
+        await self.emit_status(
+            __event_emitter__, "info", "/Calling N8N Workflow...", False
+        )
+        chat_id, _ = extract_event_info(__event_emitter__)
+        session_id = chat_id or "default_session"
+        messages = body.get("messages", [])
+
+        if not messages:
+            error_msg = "No messages found in the request body."
+            await self.emit_status(__event_emitter__, "error", error_msg, True)
+            body["messages"].append({"role": "assistant", "content": error_msg})
+            return {"error": error_msg}
+
+        question = str(messages[-1]["content"]).strip()
+        if not question:
+            error_msg = "Empty question."
+            await self.emit_status(__event_emitter__, "error", error_msg, True)
+            body["messages"].append({"role": "assistant", "content": error_msg})
+            return {"error": error_msg}
+
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.valves.n8n_bearer_token}",
+                "Content-Type": "application/json",
+            }
+            payload = self.build_payload(question, session_id)
+
+            logger.debug(
+                f"[N8N PIPE] Sending to {self.valves.n8n_url} with payload: {payload}"
+            )
+
+            async with httpx.AsyncClient(timeout=120) as client:
+                response = await client.post(
+                    self.valves.n8n_url,
+                    headers=headers,
+                    json=payload,
+                )
+
+            if response.status_code != 200:
+                raise Exception(
+                    f"n8n Error {response.status_code}: {response.text[:500]}"
+                )
+
+            data = response.json()
+            n8n_reply = self.handle_response(data)
+            body["messages"].append({"role": "assistant", "content": n8n_reply})
+
+        except httpx.RequestError as e:
+            error_msg = f"Request to n8n failed: {str(e)}"
+            await self.emit_status(__event_emitter__, "error", error_msg, True)
+            body["messages"].append({"role": "assistant", "content": error_msg})
+            return {"error": error_msg}
+
+        except Exception as e:
+            error_msg = f"Error during n8n execution: {str(e)}"
+            await self.emit_status(__event_emitter__, "error", error_msg, True)
+            body["messages"].append({"role": "assistant", "content": error_msg})
+            return {"error": error_msg}
+
+        await self.emit_status(__event_emitter__, "info", "Complete", True)
+        return n8n_reply
