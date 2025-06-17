@@ -1,0 +1,1105 @@
+{
+  "name": "ACC_Agentbot",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Agent with Webhook for Open WebUI",
+        "height": 1265,
+        "width": 3276,
+        "color": 6
+      },
+      "id": "7e16762b-df18-450f-a4b8-d4b1ba004cef",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        260,
+        -1020
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "182bca1f-44c1-4705-84fa-c0b2305a5b60",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3340,
+        -940
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d264444f-c01a-4fa0-86a4-c0bf0e4c8537",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3120,
+        -940
+      ],
+      "id": "1e730da6-4ebc-4dd1-a0f3-e4b9fcd8ef49",
+      "name": "Edit Fields (Set Output Field)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://755b-134-236-110-84.ngrok-free.app/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.body.chatInput }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        -940
+      ],
+      "id": "a298f0ec-1b33-40a0-a2a6-610d56d66407",
+      "name": "bot.py",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "683dcec2-bd2a-4b99-96ec-4e3aa96b8f57",
+              "name": "body.chatInput",
+              "value": "={{ $json.body.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "c77384ee-2985-4c3c-8167-3fc4997cee14",
+              "name": "body.sessionId",
+              "value": "={{ $json.body.sessionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1500,
+        -940
+      ],
+      "id": "d10221c6-9ea0-40ae-b4dd-8290ba5da6de",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        -60
+      ],
+      "id": "ca72b87b-d960-4f93-92e5-b673a0c9403d",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=\"\"\nคุณคือผู้ช่วยจัดอันดับข้อมูลที่มีความเข้าใจลึกซึ้งในเรื่องผังบัญชีและสามารถวิเคราะห์ความเกี่ยวข้องของข้อมูลกับคำถามได้อย่างละเอียด\n\nคำถาม: {{ $json.body.chatInput }}\n\nพิจารณาข้อมูลจากฐานข้อมูลทุกรายการ ว่ามี \"ความเกี่ยวข้องโดยตรง\" หรือ \"ความเกี่ยวข้องสูง\" กับคำถามหรือไม่ โดยที่ข้อมูลแต่ละรายการห้ามซ้ำกัน :\n\nวิธีการ:\n- ให้วิเคราะห์เนื้อหาของแต่ละข้อมูลอย่างละเอียด\n- ให้พิจารณาความหมาย, คำสำคัญ, หมวดหมู่ หรือรายละเอียดที่ตรงกับคำถาม\n- ให้จัดอันดับข้อมูลจากความเกี่ยวข้องมากที่สุดไปน้อยที่สุด\n\nรูปแบบคำตอบ:\nกรุณาตอบกลับโดยระบุลำดับหมายเลขที่จัดอันดับไว้ โดยใช้รูปแบบนี้เท่านั้น: 2,1,4,3,5 และใส่เนื้อหาของข้อมูลที่จัดอันดับด้วย ทั้งหมด 10 อันดับแรกที่มีความใกล้เคียงมากที่สุด\n\nห้ามให้คำอธิบายเพิ่มเติมและ กรุณาเรียงลำดับข้อมูลให้เลย:\n\"\"\"",
+              "role": "system"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2,
+          "topP": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1880,
+        -940
+      ],
+      "id": "7c94c72f-67a4-47dd-8485-444b61e99d81",
+      "name": "OpenAI_rerank",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invoke-n8n-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7001f7b7-ca0b-48ae-9dcd-2fc3fe80e792",
+      "name": "Webhook_n8n_connect",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        -940
+      ],
+      "webhookId": "7f8a71dd-b98a-4c87-aa3c-c0f7c3b63535"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\"\"\"\nคุณคือผู้ช่วยผู้เชี่ยวชาญด้านผังบัญชี\nคำถาม:{{ $('Edit Fields').item.json.body.chatInput }}\n\nข้อมูลที่เกี่ยวข้อง (ใช้ข้อมูลนี้ในการวิเคราะห์และตอบคำถามอย่างละเอียด):\n{{ $json.message.content }}\n\nกรุณาวิเคราะห์ข้อมูลอย่างรอบคอบและตอบคำถามโดยอ้างอิงจาก \"ข้อมูลที่เกี่ยวข้อง\"ถ้าไม่พบข้อมูลที่เป็นไปได้ให้หาข้อมูลจาก\"ฐานข้อมูล\"ที่มีเพิ่มเติม\nถ้าไม่พบข้อมูลที่เข้าข่ายคำตอบ ให้ตอบว่า 'ไม่พบข้อมูลที่ชัดเจน' หรือ 'ไม่สามารถตอบคำถามนี้ได้จากข้อมูลที่มี'\nตอบเป็นภาษาไทย และให้คำตอบที่ชัดเจน :\n\"\"\"",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        2540,
+        -940
+      ],
+      "id": "02aa52a2-1eeb-4887-a42a-7fd1edf52b36",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4",
+          "mode": "list",
+          "cachedResultName": "gpt-4"
+        },
+        "options": {
+          "temperature": 0.2,
+          "topP": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2300,
+        -820
+      ],
+      "id": "7388191e-e4a3-4a10-90e6-073959060fe1",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields').item.json.body.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2560,
+        -740
+      ],
+      "id": "39b53465-5533-4d62-8001-d5ef5752cd09",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "batchSize": 512,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        964,
+        -65
+      ],
+      "id": "a17fec18-9529-42f9-afa9-f6424f929be4",
+      "name": "Embeddings OpenAI2",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_aam",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_aam",
+          "mode": "list",
+          "cachedResultName": "documents_bu_aam"
+        },
+        "topK": 40,
+        "includeDocumentMetadata": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        580,
+        -260
+      ],
+      "id": "a3931d7a-1d56-412c-af2f-b6e9aa7678e6",
+      "name": "AAM",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_defi",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_defi",
+          "mode": "list",
+          "cachedResultName": "documents_bu_defi"
+        },
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        -260
+      ],
+      "id": "96e68f0e-67e0-4b74-9a82-567d5667931f",
+      "name": "defi",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "batchSize": 512,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1260,
+        -65
+      ],
+      "id": "91dcf92c-397d-45d3-9c05-e9b71a1b1785",
+      "name": "Embeddings OpenAI3",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_sahakorn",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_สหกรณ์",
+          "mode": "list",
+          "cachedResultName": "documents_bu_สหกรณ์"
+        },
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        1172,
+        -260
+      ],
+      "id": "0a93435b-5a99-410c-81de-21979c58d30e",
+      "name": "sahakorn",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "batchSize": 512,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1556,
+        -65
+      ],
+      "id": "22c0411d-887f-4d65-8b8f-7e12b0ba2bbe",
+      "name": "Embeddings OpenAI4",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_shop",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_ร้านค้า",
+          "mode": "list",
+          "cachedResultName": "documents_bu_ร้านค้า"
+        },
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        1460,
+        -260
+      ],
+      "id": "e02af45c-b6bc-4853-8d8d-b34dd2056ade",
+      "name": "shop",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1852,
+        -65
+      ],
+      "id": "447336e2-432a-4006-8f80-3b017d432695",
+      "name": "Embeddings OpenAI5",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_rafco",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_rafco",
+          "mode": "list",
+          "cachedResultName": "documents_bu_rafco"
+        },
+        "topK": 10,
+        "includeDocumentMetadata": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        -260
+      ],
+      "id": "80f75bec-1dc6-4941-84ae-50327c1c0641",
+      "name": "rafco",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2148,
+        -65
+      ],
+      "id": "9fe5d0d1-ddfb-4f6d-a573-4461cdef30fa",
+      "name": "Embeddings OpenAI6",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_pmg",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_pmg",
+          "mode": "list",
+          "cachedResultName": "documents_bu_pmg"
+        },
+        "topK": 40,
+        "includeDocumentMetadata": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        2060,
+        -260
+      ],
+      "id": "a9948dd6-b663-42eb-a06c-2e417a4d29fe",
+      "name": "pmg",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_pms",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_pms",
+          "mode": "list",
+          "cachedResultName": "documents_bu_pms"
+        },
+        "topK": 15,
+        "includeDocumentMetadata": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        2356,
+        -260
+      ],
+      "id": "2b1147d2-f98e-4fc6-99d6-930e1c51fb10",
+      "name": "pms",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2740,
+        -65
+      ],
+      "id": "d264faf3-0d04-42f2-b60c-87c161166932",
+      "name": "Embeddings OpenAI8",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_garden",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_สวน",
+          "mode": "list",
+          "cachedResultName": "documents_bu_สวน"
+        },
+        "topK": 18,
+        "includeDocumentMetadata": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        2660,
+        -260
+      ],
+      "id": "7c937c83-f0f2-4a4e-8466-eb927e3db40a",
+      "name": "garden",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "batchSize": 512,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        3036,
+        -65
+      ],
+      "id": "f7055a44-5b83-4845-8bec-1921a35f58ea",
+      "name": "Embeddings OpenAI9",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_cpd",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_cpd",
+          "mode": "list",
+          "cachedResultName": "documents_bu_cpd"
+        },
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        2948,
+        -260
+      ],
+      "id": "d829deaf-8e83-44d9-b50c-103fd8e51947",
+      "name": "cpd",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "batchSize": 512,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        3332,
+        -65
+      ],
+      "id": "d36ae27f-8556-452d-87db-a998eefc9931",
+      "name": "Embeddings OpenAI10",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documents_bu_rplc",
+        "toolDescription": "=ให้นำข้อมูลที่มีคำตอบใกล้เคียง หรือเกี่ยวข้องกับคำถาม\nให้จัดเรียงข้อมูลแบบนี้\n        \"Source File: {sheet_name}\\n\"\n        \"ผังบัญชี: {account_id}\\n\"\n        \"ชื่อผังบัญชี: {account_name}\\n\"\n        \"ประเภทผังบัญชี: {account_type}\\n\"\n        \"คำอธิบายผังบัญชี: {description}\"\nถ้าไม่พบข้อมูลห้ามส่งอะไรกลับมาเด็ดขาด",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "documents_bu_rplc",
+          "mode": "list",
+          "cachedResultName": "documents_bu_rplc"
+        },
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.2,
+      "position": [
+        3244,
+        -260
+      ],
+      "id": "cf2ea4f5-06b3-4e9c-8094-5eb55a03bec6",
+      "name": "rplc",
+      "credentials": {
+        "qdrantApi": {
+          "id": "AKJSGVAaXlNaCjEh",
+          "name": "QdrantApi account 3"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.2,
+          "topP": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2420,
+        -740
+      ],
+      "id": "9190595c-1120-4a8e-b01f-349e22cc0470",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "vFL2yldN3KAgdJ72",
+          "name": "Google Gemini(PaLM) Api account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1024,
+          "stripNewLines": true,
+          "timeout": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2440,
+        -60
+      ],
+      "id": "2b63ca0a-2dde-4c56-8c03-41afaf9af62f",
+      "name": "Embeddings OpenAI7",
+      "credentials": {
+        "openAiApi": {
+          "id": "5flSrBjcpj4eNcXT",
+          "name": "OpenAi account 18"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields (Set Output Field)": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "bot.py": {
+      "main": [
+        []
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "bot.py",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "AAM",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI_rerank": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook_n8n_connect": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields (Set Output Field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "defi",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AAM": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "defi": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "sahakorn",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sahakorn": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI4": {
+      "ai_embedding": [
+        [
+          {
+            "node": "shop",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "shop": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI5": {
+      "ai_embedding": [
+        [
+          {
+            "node": "rafco",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "rafco": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI6": {
+      "ai_embedding": [
+        [
+          {
+            "node": "pmg",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pmg": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pms": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI8": {
+      "ai_embedding": [
+        [
+          {
+            "node": "garden",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "garden": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI9": {
+      "ai_embedding": [
+        [
+          {
+            "node": "cpd",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI10": {
+      "ai_embedding": [
+        [
+          {
+            "node": "rplc",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cpd": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "rplc": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI_rerank",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI7": {
+      "ai_embedding": [
+        [
+          {
+            "node": "pms",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "58052d3c-8d58-4a3c-97e9-367b4ad52272",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8136c7c862959b0ac9953b52946a7df268886611d5b18311159ac4d75bcab7c6"
+  },
+  "id": "F9guYOcUcp3cEAel",
+  "tags": []
+}
