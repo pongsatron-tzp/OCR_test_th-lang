@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import PointStruct, VectorParams, Distance, FilterSelector, Filter, FieldCondition, MatchValue 
-from qdrant_client.http.exceptions import UnexpectedResponse # คงบรรทัดนี้ไว้
+from qdrant_client.http.exceptions import UnexpectedResponse
 import uuid
 import grpc
 # --- Google Sheet Imports ---
