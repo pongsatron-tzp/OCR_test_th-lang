@@ -81,7 +81,6 @@ def build_metadata_filter(metadata_dict):
     must_conditions = []
     for key, value in metadata_dict.items():
         if value:
-            # ในที่นี้สมมติว่า value เป็น string หรือ number ตรงๆ
             must_conditions.append(
                 FieldCondition(
                     key=key,
